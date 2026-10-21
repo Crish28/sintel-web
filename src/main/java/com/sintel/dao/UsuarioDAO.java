@@ -213,4 +213,37 @@ public class UsuarioDAO {
 
         return usuario;
     }
+
+    // Registrar un nuevo usuario y retornar el ID generado
+    public int registrarRetornandoId(Usuario usuario) throws SQLException {
+        String sql = """
+                INSERT INTO usuarios
+                    (nombre, correo, password_hash, rol, activo)
+                VALUES (?, ?, ?, ?, ?)
+                """;
+
+        try (Connection conexion = Conexion.conectar();
+             PreparedStatement consulta =
+                     conexion.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
+
+            consulta.setString(1, usuario.getNombre());
+            consulta.setString(2, usuario.getCorreo());
+            consulta.setString(3, usuario.getPasswordHash());
+            consulta.setString(4, usuario.getRol());
+            consulta.setBoolean(5, usuario.isActivo());
+
+            int filasAfectadas = consulta.executeUpdate();
+            if (filasAfectadas > 0) {
+                try (ResultSet rs = consulta.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        int idGenerado = rs.getInt(1);
+                        usuario.setIdusuario(idGenerado);
+                        return idGenerado;
+                    }
+                }
+            }
+            return 0;
+        }
+    }
 }
+

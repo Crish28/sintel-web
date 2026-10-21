@@ -445,4 +445,38 @@ public List<Proyecto> listarPorFiltros(
     return proyectos;
 }
 
+    // Registrar un nuevo proyecto y retornar el ID generado
+    public int registrarRetornandoId(Proyecto proyecto) throws SQLException {
+        String sql = """
+                INSERT INTO proyectos
+                    (nombre, idclientes, idestados,
+                     fecha_entrega, valor_total, iva)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """;
+
+        try (
+            Connection conexion = Conexion.conectar();
+            PreparedStatement consulta =
+                    conexion.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)
+        ) {
+            consulta.setString(1, proyecto.getNombre());
+            consulta.setInt(2, proyecto.getIdclientes());
+            consulta.setInt(3, proyecto.getIdestados());
+            consulta.setDate(4, java.sql.Date.valueOf(proyecto.getFechaEntrega()));
+            consulta.setBigDecimal(5, proyecto.getValorTotal());
+            consulta.setBigDecimal(6, proyecto.getIva());
+
+            int filasAfectadas = consulta.executeUpdate();
+            if (filasAfectadas > 0) {
+                try (ResultSet rs = consulta.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        int idGenerado = rs.getInt(1);
+                        proyecto.setIdproyectos(idGenerado);
+                        return idGenerado;
+                    }
+                }
+            }
+            return 0;
+        }
+    }
 }

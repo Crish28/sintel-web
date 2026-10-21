@@ -287,4 +287,37 @@ public class ClienteDAO {
             }
         }
     }
+
+    // Registrar un nuevo cliente y retornar el ID generado
+    public int registrarRetornandoId(Cliente cliente) throws SQLException {
+        String sql = """
+                INSERT INTO clientes
+                    (nombre, correo, telefono, direccion)
+                VALUES (?, ?, ?, ?)
+                """;
+
+        try (
+            Connection conexion = Conexion.conectar();
+            PreparedStatement consulta =
+                    conexion.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)
+        ) {
+            consulta.setString(1, cliente.getNombre());
+            consulta.setString(2, cliente.getCorreo());
+            consulta.setString(3, cliente.getTelefono());
+            consulta.setString(4, cliente.getDireccion());
+
+            int filasAfectadas = consulta.executeUpdate();
+            if (filasAfectadas > 0) {
+                try (ResultSet rs = consulta.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        int idGenerado = rs.getInt(1);
+                        cliente.setIdclientes(idGenerado);
+                        return idGenerado;
+                    }
+                }
+            }
+            return 0;
+        }
+    }
 }
+

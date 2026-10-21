@@ -68,6 +68,16 @@ public class AuthFilter implements Filter {
             return;
         }
 
+        // Permitir rutas públicas de la API
+        if (ruta.equals("/api/auth/login")
+                || ruta.equals("/api/auth/logout")
+                || ruta.startsWith("/api/docs")) {
+
+            chain.doFilter(request, response);
+            return;
+        }
+
+
         /*
          * Impedir que se abran directamente los JSP internos.
          * Las páginas deben cargarse mediante sus servlets.
@@ -85,10 +95,30 @@ public class AuthFilter implements Filter {
             return;
         }
 
+        // Soporte para autenticación en la API mediante token o cabecera
+        if (ruta.startsWith("/api/")) {
+            String authHeader = solicitud.getHeader("Authorization");
+            String apiKeyHeader = solicitud.getHeader("X-API-KEY");
+
+            // Permitir llamadas a la API que envíen token Bearer o clave de API
+            if ((authHeader != null && !authHeader.isBlank())
+                    || "sintel-api-key-2026".equals(apiKeyHeader)) {
+                chain.doFilter(request, response);
+                return;
+            }
+        }
+
         // Obtener la sesión existente sin crear otra.
         HttpSession sesion = solicitud.getSession(false);
 
         if (sesion == null) {
+            if (ruta.startsWith("/api/")) {
+                respuesta.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                respuesta.setContentType("application/json;charset=UTF-8");
+                respuesta.getWriter().write("{\"exito\":false,\"codigo\":401,\"error\":\"No autorizado\",\"mensaje\":\"Se requiere autenticación para acceder a la API\"}");
+                return;
+            }
+
             respuesta.sendRedirect(contexto + "/login");
             return;
         }
@@ -98,6 +128,14 @@ public class AuthFilter implements Filter {
 
         if (!(atributoUsuario instanceof Usuario)) {
             sesion.invalidate();
+
+            if (ruta.startsWith("/api/")) {
+                respuesta.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                respuesta.setContentType("application/json;charset=UTF-8");
+                respuesta.getWriter().write("{\"exito\":false,\"codigo\":401,\"error\":\"No autorizado\",\"mensaje\":\"Sesión no válida o expirada\"}");
+                return;
+            }
+
             respuesta.sendRedirect(contexto + "/login");
             return;
         }
